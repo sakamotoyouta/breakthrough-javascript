@@ -1,112 +1,110 @@
-function Modal(el) {
-  this.initialize(el);
+/**************************
+*
+*	Model
+*
+***************************/
+function ModalModel(){
+	this.index = 0;
+	this.listeners = {
+		changeImg: [],
+		showImg: [],
+	};
 }
-
-Modal.prototype.initialize = function(el) {
-  this.$el = el;  
-  this.$container = $("#modal");
-  this.$contents = $("#modal-contents");
-
-  // 削除
-  // this.$close = $("#modal-close");
-  // this.$next = $("#modal-next");
-  // this.$prev = $("#modal-prev");
-
-  this.$overlay = $("#modal-overlay");
-  this.$parents = this.$el.parents("ul");
-  this.$window = $(window);
-  this.handleEvents();
+ModalModel.prototype.on = function(event,func){
+	this.listeners[event].push(func);
 };
-
-Modal.prototype.handleEvents = function() {
-  var self = this;
-  this.$parents.on("click", "a" , function(e) {
-    self.show(e);
-    return false;
-  });
-
-  this.$container.on("click", "#modal-next", function(e)　{
-    self.next(e);
-    return false;
-  });
-  this.$container.on("click", "#modal-prev", function(e) {
-    self.prev(e);
-    return false;
-  });
-  this.$container.on("click", "#modal-close", function(e) {
-    self.hide(e);
-    return false;
-  });
-
-  this.$overlay.on("click", function(e) {
-    self.hide(e);
-    return false;
-  });
-
-  this.$window.on("load resize", function(){
-    self.resize();
-  });
-
+ModalModel.prototype.trigger = function(event){
+	$.each(this.listeners[event],function(){
+		this();
+	});
 };
-
-Modal.prototype.show = function(e) {
-  var $target = $(e.currentTarget),
-      src = $target.attr("href");
-  this.$contents.html("<img src=\"" + src + "\" />");
-  this.$container.fadeIn();
-  this.$overlay.fadeIn();
-
-  var index = $target.data("index");
-  this.countChange = this.createCounter(index, this.$el.length);
-  return false;
+ModalModel.prototype.changeIndex = function(num,len){
+	this.index = (this.index+num+len)%len;
+	this.trigger('changeImg');
 };
-
-Modal.prototype.hide = function(e) {
-  this.$container.fadeOut();
-  this.$overlay.fadeOut();
+ModalModel.prototype.setIndex = function(index){
+	this.index = index;
+	this.trigger('showImg');
 };
+/**************************
+*
+*	View
+*
+***************************/
+function ModalView(el){
+	this.$container = $("#modal");
+	this.$contents = $("#modal-contents");
+	this.$overlay = $("#modal-overlay");
+	this.$parents = $(el);
+	this.$window = $(window);
+	this.model = new ModalModel();
+	this.len = this.$parents.find('a').length;
+	this.handleEvents();
+}
+ModalView.prototype.handleEvents = function(){
+	var self = this;
+	this.$parents.on("click", "a" , function() {
+		self.show(this);
+		return false;
+   });
 
-Modal.prototype.slide = function(index) {
-  this.$contents.find("img").fadeOut({
-    complete: function() {
-      var src = $("[data-index=\"" + index + "\"]").find("img").attr("src");
-      $(this).attr("src", src).fadeIn();
-    }
-  });
+	this.$container.on("click", "#modal-next", function()　{
+		self.model.changeIndex(1,self.$parents.find('a').length);
+		return false;
+	});
+   this.$container.on("click", "#modal-prev", function() {
+     self.model.changeIndex(-1,self.$parents.find('a').length);
+     return false;
+   });
+	this.model.on('changeImg',function(){
+		self.slide();
+	});
+	this.model.on('showImg',function(){
+		self.showImg();
+	});
+
+   this.$container.on("click", "#modal-close", function(e) {
+     self.close();
+     return false;
+   });
+   this.$overlay.on("click", function(e) {
+     self.close();
+     return false;
+   });
+
+   this.$window.on("load resize", function(){
+     self.resize();
+   });
 };
-
-Modal.prototype.createCounter = function(index, len){
-  return function(num) {
-    return index = (index + num + len) % len;
-  };
+ModalView.prototype.showImg = function(){
+	var src = $("[data-index=\"" + this.model.index + "\"]").find("img").attr("src");
+	this.$contents.html("<img src=\"" + src + "\" />");
 };
-
-Modal.prototype.next = function() {
-  this.slide(this.countChange( 1 ));
+ModalView.prototype.slide = function(){
+	var self = this;
+	var src = $("[data-index=\"" + this.model.index + "\"]").find("img").attr("src");
+	//画像をスライドさせる
+	this.$contents.find("img").fadeOut({
+		complete: function() {
+			$(this).attr("src", src).fadeIn();
+		}
+	});
 };
-
-Modal.prototype.prev = function() {
-  this.slide(this.countChange( -1 ));
+ModalView.prototype.show = function(elem){
+	this.$container.fadeIn();
+	this.$overlay.fadeIn();
+	this.model.setIndex($(elem).data('index'));
 };
-
-Modal.prototype.resize = function() {
-  var w = this.$window.width();
-  if(w < 640){
-    this.$container.css({"width": "320","height":"213"});
-  }else{
-    this.$container.css({"width": "750","height":"500"});
-  }
+ModalView.prototype.close = function(){
+	this.$container.fadeOut();
+   this.$overlay.fadeOut();
 };
-　
-var modal = new Modal($("#modal-thumb a"));
-
-$("#more-btn").on("click", function() {
-  var html = '<li>\
-    <a href="images/photo-04.JPG" data-index="3">\
-      <img alt="" src="images/photo-04.JPG" width="160" class="img-thumbnail">\
-    </a>\
-  </li>';
-  $(html).appendTo($("#modal-thumb")).hide().fadeIn();
-  $(this).fadeOut();
-  modal.$el = $("#modal-thumb a");
-});
+ModalView.prototype.resize = function(){
+	var w = this.$window.width();
+	if(w < 640){
+	  this.$container.css({"width": "320","height":"213"});
+	}else{
+	  this.$container.css({"width": "750","height":"500"});
+	}
+};
+new ModalView('#modal-thumb');
