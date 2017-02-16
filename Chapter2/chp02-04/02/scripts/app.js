@@ -3,7 +3,7 @@ function Modal(el) {
 }
 
 Modal.prototype.initialize = function(el) {
-  this.$el = el;  
+  this.$el = el;
   this.$container = $("#modal");
   this.$contents = $("#modal-contents");
   this.$close = $("#modal-close");
@@ -62,6 +62,18 @@ Modal.prototype.show = function(e) {
   return false;
 };
 
+Modal.prototype.createCounter = function(hogeindex, len){
+	//ここで変数を定義して、下の無名関数の中でその変数を参照すればそれはクロージャとなる
+	//しかし、ここでは変数を定義していない
+	//それは、変数定義の代わりに引数でもいいからである
+	//returnの無名関数からhogeindexを参照すればクロージャになる
+	//クロージャなのでhogeindexの値はこの関数が実行された後も保持される
+  return function(num) {
+    return hogeindex = (hogeindex + num + len) % len;
+  };
+};
+
+
 Modal.prototype.hide = function(e) {
   this.$container.fadeOut();
   this.$overlay.fadeOut();
@@ -76,11 +88,7 @@ Modal.prototype.slide = function(index) {
   });
 };
 
-Modal.prototype.createCounter = function(index, len){
-  return function(num) {
-    return index = (index + num + len) % len;
-  };
-};
+
 
 Modal.prototype.next = function() {
   this.slide(this.countChange( 1 ));
