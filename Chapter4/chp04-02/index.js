@@ -20,14 +20,36 @@
     });
   };
 
+/**
+*	selectのどちらかが変更されたら、sortを実行してfilterを実行する
+*	sort or filter　どちらかのみを実行しないのはどちらかが既に選択されている場合に備えて
+*/
   App.prototype.onChange = function(e) {
     var self = this;
+	/**
+	* whereに
+	* [
+	* function(list){return this.sort()}
+	* ,function(list){return this.filter()}
+	* ]
+	* を代入
+	*	要はsortとfilterを実行する関数を配列に整理する
+	*	後からselect項目が増えても対応しやすい
+	*
+	*	[this.sort(),this.filter()]にしない理由は_.reduceでcurrent(prev)ができなくなるから
+	*	this.sort(list,?)->this.filter(this.sort(list,?))になる
+	*	クロージャで$el.val()を保持させてる
+	*/
     var where = $("select").map(function(i, el) {
       var $el = $(el);
       return function(list) {
         return self[$el.attr("name")](list, $el.val());
       };
     });
+	//  this.data.listはjsonオブジェクト全体
+	//  function(this.data.list){return this.sort()},
+	// function(function(this.data.list){return this.sort();}){return this.filter();}
+	//	ソートしてフィルターしたリストが入る
     var list = _.reduce(where, function(prev, current) {
       return current(prev);
     }, this.data.list);
